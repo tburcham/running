@@ -1,0 +1,284 @@
+ <html>                                                                  
+ <head>  
+ <style type="text/css">
+ 	textarea { height:300px; width:600px;}
+
+ </style>                                                                
+ <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+ <script src="date.js"></script>        
+ <script type="text/javascript">                                         
+	$(document).ready(function() {
+	
+
+		var defaultStartTime = 18 - 4; // 6pm
+		var defaultLength = 90; // minutes
+
+		var rawText = $("#rawText").val();
+
+		var textTokens = rawText.split("\n");
+
+		//console.dir(textTokens);
+
+
+		var weekTokens = {
+			'M- ' : 0,
+			'T- ' : 1,
+			'W- ' : 2,
+			'Th-' : 3,
+			'F- ' : 4,
+			'S- ' : 5,
+			'Su-' : 6
+  		};
+
+  		var groupedTokens = [];
+
+
+  		var newGroup = true;
+  		var currentGroup;
+  		$.each(textTokens, function(index, item) {
+
+  			if (newGroup) {
+  				currentGroup = { dateHeader : item, tokens:[] }
+  				groupedTokens.push(currentGroup);
+  				newGroup = false;
+  			} else {
+
+  				if (weekTokens[item.substring(0, 3)] !== undefined) { 
+  					// it's a new day, rather than a line break
+  					currentGroup.tokens.push(item);
+  				} else {
+  					currentGroup.tokens[currentGroup.tokens.length - 1] += " " + item;
+  				}
+
+  				
+  			}
+  			if (item == "" || item == " ") {
+  				newGroup = true;
+  			}
+
+  		});
+
+  		console.dir(groupedTokens);
+
+  		var indexedItems = [];
+  		$.each(groupedTokens, function(index, item) {
+
+  			var dateHeader = item.dateHeader;
+  			var startDateStr = dateHeader.split('-')[0] + ', ' + new Date().getFullYear();
+  			var startDate = new Date(startDateStr);
+
+  			console.log(startDate);
+
+  			var items = item.tokens;
+
+  			$.each(items, function(_index, _item) {
+
+  				var dayIndex = weekTokens[_item.substring(0, 3)];
+  				var d = new Date(startDate.getTime());
+  				d.setDate(d.getDate() + dayIndex);
+
+  				d.setHours(defaultStartTime);
+
+          var tzOffset = 4;
+
+  				if (d.getDay() == 2 || d.getDay() == 4) {
+  					// Tue, Thur
+  					d.setHours(18 - tzOffset);
+  					d.setMinutes(15);
+  				}
+  				if (d.getDay() == 6) {
+  					// Sat
+  					d.setHours(8 - tzOffset);
+  				}
+
+  				var endDate = new Date(d.getTime());
+  				endDate.setMinutes(endDate.getMinutes() + defaultLength);
+
+  				//console.log(d);
+  				//console.log(_item);
+
+  				// Trim space from the front
+  				var text = _item.substring(3, _item.length);
+  				if (text.charAt(0) == " ") {
+  					text = text.substring(1, text.length);
+  				}
+
+  				indexedItems.push({
+  					date: d,
+  					endDate: endDate,
+  					label: 'LocoFit: ' + text
+
+  				});
+
+  			});
+
+
+  		});
+
+  		console.dir(indexedItems);
+  		makeICal(indexedItems);
+
+
+	}); 
+
+	function makeICal(items) {
+
+		var text = [];
+
+		text.push("BEGIN:VCALENDAR");
+		text.push("VERSION:2.0");
+		text.push("PRODID:LOCOFIT");
+
+		$.each(items, function(index, item) {
+
+			text.push("BEGIN:VEVENT");
+
+			text.push("UID:locoevent" + new Date().getTime() + '_' + index);
+			text.push("DTSTAMP:" + convertISOString(item.date));
+			text.push("DTSTART:" + convertISOString(item.date));
+			text.push("DTEND:" + convertISOString(item.endDate));
+			text.push("ORGANIZER;CN=LocoFit:MAILTO:tburcham@gmail.com");
+			text.push("SUMMARY:" + item.label);
+
+			text.push("END:VEVENT");
+
+		});
+
+
+		text.push("END:VCALENDAR");
+
+		$("#iCal").val(text.join("\n"));
+
+
+	}
+
+	function convertISOString(d) {
+
+		var str = d.toISOString();
+
+		var newStr = str.split('.')[0];
+		newStr = newStr.replace(/-/gi, '');
+		newStr = newStr.replace(/:/gi, '');
+
+		//var newStr = d.toString('yyyyMMddTHHmmss');
+
+		return newStr;
+
+	}                                 
+ </script>                                                               
+ </head>                                                                 
+ <body>                                                                  
+   <textarea id="rawText">
+ July 14-20
+M- OFF
+T- (Davidson Mesa) 1 mile warm up and 1/2 mile cool down. 3x2 mile tempo efforts @ 1/2 pace. Short, 2 minute recovery between.
+W- OFF
+Th- (LRC) 1 mile warm up, walk to cool down.  Hill progression run, 50 minutes.
+F- OFF
+S- 6-7 mile run, comfortable effort.
+Su- Strength train
+
+July 21-27
+M- OFF
+T- (Heritage Park) 1 mile warm up and 1/2 mile cool down.  10k time trial @ 1/2 pace or a touch faster.
+W- OFF
+Th- (Peak to Peak) 1 mile warm up and cool down.  Descending ladder: 1600,1200,800,600,400,200 meter efforts.
+F- OFF
+S- Long run, 11 miles.  Run some good downhill stretches today and practice running close to 1/2 pace on the descents.  Overall aim to average w/in 45 seconds of goal pace.
+Su- VERY EASY 2 mile run and strength train.
+
+July 28-August 3
+M- OFF
+T- (Heritage Park) 1 mile warm up and 1/2 mile cool down. 4-5x1 mile efforts@ 5k/10k pace.
+W- OFF
+Th- (LRC) 1 mile warm up and 1/2 mile cool down. 6x lollipop loop.
+F- OFF
+S- 12 mile run. Comfortable effort.  Just building your mileage.
+Su- VERY easy 2-3 mile run and strength train.
+
+August 4-10
+M- OFF
+T- (LRC) 1/2 mile warm up and cool down.  Hilly Tempo run, 50 minutes.
+W- OFF
+Th- (LMS) 1 mile warm up and cool down. 2x3-5 laps ins and outs. (Just do strides while you are on your trip, 10x30 seconds.)
+F- OFF
+S- 5 mile run. Easy!
+Su- Very easy 2-3 mile run and strength train.
+
+August 11-17
+M- OFF
+T- 1 mile warm up and cool down. 10x1 minute hill sprints.
+W- OFF
+Th- (Davidson Mesa) Easy 4 mile group run.
+F- OFF
+S- Very easy 2 mile run w/4x30 second strides.
+Su- Revel 1/2!  Have fun Tim!
+
+August 18-24
+M- OFF 
+T- (Davidson Mesa) OFF or very easy 3-4 mile run.
+W- OFF
+Th- (Peak to Peak) 1 mile warm up and cool down.  4x400, 4x800.  Again, depending on recovery.  You may need to just run easy today.  Don't press the pace if your legs don't feel good!
+F- OFF
+S- Easy 3-4 mile run.
+Su- Strength train.
+
+August 25-31
+M- OFF
+T- (LRC) 1/2 mile warm up and cool down.  Tyler Hill repeats, 6-7X up and down only.
+W- OFF
+Th- (Heritage Park) 1 mile warm up, 1/2 mile cool down. 3x1.5 mile efforts @ 10k pace.
+F- OFF
+S- 14 mile run.  Comfortable and steady.  Building your long run.  Good fueling!
+Su- VERY EASY 3-4 mile run and strength train.
+
+September 1-7
+M- OFF
+T- (Community Park) 1 mile warm up and 1/2 mile cool down. 6 mile tempo run. 
+W- OFF
+Th- (LMS) 1 mile warm up and 1/2 mile cool down.  6-8x800's.
+F- OFF
+S- 15 mile run. Generally comfortable, but finish fast.  Last 3 miles @ 1/2 pace.
+Su- Very easy 3 mile run.  Warming your legs to aid in recovery.  Strength train.
+
+September 8-14
+M- OFF
+T- (Davidson Mesa) 3x10 minute efforts @ 10k pace. 1 mile warm up, 1/2-1 mile cool down.
+W- OFF
+Th- (LRC) 1/2 mile warm up and cool down. Tyler Hill Loop.  Hard hill, easy loop.  50 minutes.
+F- OFF
+S- 5 mile run, easy.
+Su- Very easy 3-4 mile run and strength train.
+
+September 15-21
+M- OFF
+T- (Davidson Mesa) 1 mile warm up and 1/2 mile cool down. 3x2 mile tempo efforts @ 10k-1/2 pace.  Short recovery, 2 minutes between efforts.
+W- OFF
+Th- (Community Park) 1 mile warm up and cool down. 1,2,3,4,5,4,3,2,1 minute efforts w/ 2 minutes recovery between.
+F- OFF
+S- Long run, 15 miles.  Run w/in 45 seconds of goal pace.  Fuel well!
+Su- VERY EASY 3 mile run and strength train.
+
+September 22-28
+M- OFF
+T- (Heritage Park) 1 mile warm up, and cool down. 3x1 mile efforts.  Run these all out, but be careful of form!
+W- OFF
+Th- 4 mile group run.
+F- OFF
+S- 5 mile run, comfortable and fun.
+Su- Very easy 3 mile run and strength train.
+
+September 29-October 5
+M- OFF
+T- 10x1 minute hill sprints w/ 2 minutes recovery between.
+W- OFF
+Th- 4 mile run.  Comfortable effort.
+F- OFF
+S- Easy 2 mile run w/4x30 second strides to shake out.
+Su- Portland 1/2!  Have a great race Tim!
+   </textarea>   
+   <textarea id="iCal"></textarea>                                     
+ </body>    
+
+ </html>
+
